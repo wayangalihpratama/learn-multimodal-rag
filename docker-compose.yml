@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  multimodal-rag:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
