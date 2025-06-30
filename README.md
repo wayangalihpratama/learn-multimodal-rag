@@ -1,15 +1,18 @@
-# 🌿 Learn Multimodal RAG: Pest & Disease Image Search
+# 🌿 Multimodal RAG: Pest & Disease Image Search
 
-A practical implementation of **Multimodal Retrieval-Augmented Generation (RAG)** using **CLIP** and **BLIP** for pest and crop disease detection based on plant and leaf images.
 
-This project uses:
-- **CLIP** for image embeddings
-- **BLIP** for automatic image captioning
-- **ChromaDB** for vector storage
-- **Streamlit** for a web UI to search similar images
-- **Docker Compose** to containerize the application
+[![GitHub repo](https://img.shields.io/badge/GitHub-Repo-black?logo=github)](https://github.com/your-username/learn-multimodal-rag) [![Docker](https://img.shields.io/badge/Built%20with-Docker-blue?logo=docker)](https://www.docker.com/) [![Streamlit](https://img.shields.io/badge/Powered%20by-Streamlit-orange?logo=streamlit)](https://streamlit.io/) [![ChromaDB](https://img.shields.io/badge/Vector%20DB-ChromaDB-purple)](https://www.trychroma.com/) [![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)](https://www.python.org/downloads/release/python-3100/) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
----
+
+This project is a multimodal Retrieval-Augmented Generation (RAG) application that lets users upload images of plant diseases and retrieve visually similar samples using image embeddings, captions, and ChromaDB vector search.
+
+## 🧰 Features
+- 🖼️ Upload an image of a pest/disease
+- 🤖 BLIP captioning & image embedding
+- 🔍 Find visually similar cases
+- 💾 Vector database powered by ChromaDB server
+- 🌐 Full Dockerized environment
+
 
 ## 📦 Tech Stack
 
@@ -26,19 +29,20 @@ This project uses:
 ## 📁 Project Structure
 
 ```bash
-learn-multimodal-rag/
+.
 ├── app/
-│ ├── indexing.py # Index dataset images into ChromaDB
-│ ├── main.py # Streamlit app for searching
-│ ├── utils.py # Embedding & captioning helpers
-│ ├── chroma/ # ChromaDB persistence directory
-├── data/
-│ └── pest_disease/ # Dataset images organized by label
-├── chroma/ # Mounted volume for ChromaDB
-├── entrypoint.sh # Entrypoint script: indexing + UI
-├── Dockerfile # Docker image config
-├── docker-compose.yml # Container setup
-└── requirements.txt # Python dependencies
+│   ├── main.py              # Streamlit UI
+│   ├── indexing.py          # Dataset indexer
+│   ├── utils.py             # BLIP + embedding logic
+│   ├── logs/                # App logs
+│   └── chroma/              # Chroma persistence (if using local)
+├── data/                    # Input images to be indexed
+│   └── pest_disease/
+├── chroma-data/             # Persisted ChromaDB volume (optional)
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+└── README.md
 ```
 
 
@@ -46,7 +50,7 @@ learn-multimodal-rag/
 
 ## 🚀 How to Run
 
-### 1. 📥 Clone the repository
+### 1. 📥 Clone the Repository
 
 ```bash
 git clone https://github.com/your-username/learn-multimodal-rag.git
@@ -88,6 +92,35 @@ Open in your browser:
 http://localhost:8501
 ```
 
+### 🔧 Docker Compose Overview
+
+```yaml
+version: '3.8'
+
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./chroma-data:/chroma
+    restart: unless-stopped
+
+  multimodal-rag:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - chromadb
+    restart: unless-stopped
+
+```
+
 ---
 
 ## 🔍 How It Works
@@ -124,19 +157,18 @@ docker-compose logs -f
 
 ## ⚠️ Troubleshooting
 
-- No results returned:
-  Ensure that indexing ran before UI started. The entrypoint.sh script handles this, but you can run indexing manually inside the container:
-
-```bash
-docker exec -it <container_name> python app/indexing.py
-```
-
-- ChromaDB data not saved:
-  Make sure the volume ./chroma:/app/app/chroma is properly mounted.
+- No similar results?
+  Make sure images are indexed by checking logs.
+- Still empty?
+  Check logs in app/logs/app.log.
+- Embeddings or captions fail?
+  Make sure your models are downloaded and supported.
+- Collection empty in main.py?
+  Ensure indexing completed before Streamlit starts.
 
 ---
 
-## 📚 References
+## 📚 Acknowledgments
 - [CLIP (OpenAI)](https://github.com/openai/CLIP)
 - [BLIP (Salesforce)](https://github.com/salesforce/BLIP)
 - [ChromaDB](https://www.trychroma.com/)

@@ -1,6 +1,14 @@
 version: '3.8'
 
 services:
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./chroma-data:/chroma  # optional, for persistence
+    restart: unless-stopped
+
   multimodal-rag:
     build: .
     ports:
@@ -8,7 +16,8 @@ services:
     volumes:
       - ./app:/app/app
       - ./data:/app/data
-      - ./chroma:/app/app/chroma  # Make sure chroma persistence is mounted
     environment:
       - PYTHONUNBUFFERED=1
+    depends_on:
+      - chromadb
     restart: unless-stopped

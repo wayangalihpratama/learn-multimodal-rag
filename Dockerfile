@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     git \
     ffmpeg \
     libgl1-mesa-glx \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -20,7 +21,7 @@ ENV PYTHONPATH=/app
 # Copy app code
 COPY app/ ./app
 
-# Copy entrypoint script
+# Copy and set entrypoint
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

@@ -1,10 +1,9 @@
 import os
 from tqdm import tqdm
-import chromadb
 import logging
 import hashlib
 
-from chromadb.config import Settings
+from chromadb import HttpClient
 from utils import get_image_embedding, generate_caption
 
 # --- Setup Logging ---
@@ -12,9 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # --- ChromaDB client ---
-chroma_client = chromadb.Client(
-    Settings(persist_directory="app/chroma", anonymized_telemetry=False)
-)
+chroma_client = HttpClient(host="chromadb", port=8000)
 collection = chroma_client.get_or_create_collection(name="pest_disease")
 logger.info(f"✅ Chroma collection count: {collection.count()}")
 

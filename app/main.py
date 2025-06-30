@@ -1,7 +1,6 @@
 import streamlit as st
 from utils import get_image_embedding
-import chromadb
-from chromadb.config import Settings
+from chromadb import HttpClient
 import logging
 import os
 
@@ -21,12 +20,7 @@ logger.info("🔧 Streamlit app started.")
 
 # --- Initialize ChromaDB ---
 try:
-    chroma_client = chromadb.Client(
-        Settings(
-            persist_directory="app/chroma",  # adjust if needed
-            anonymized_telemetry=False,
-        )
-    )
+    chroma_client = HttpClient(host="chromadb", port=8000)
     collection = chroma_client.get_or_create_collection(name="pest_disease")
     logger.info("✅ ChromaDB initialized.")
     logger.info(f"✅ Chroma collection count: {collection.count()}")
