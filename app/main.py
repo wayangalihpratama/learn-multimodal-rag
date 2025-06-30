@@ -70,7 +70,7 @@ if uploaded_file:
             try:
                 results = collection.query(
                     query_embeddings=[query_embedding.tolist()],
-                    n_results=3,
+                    n_results=10,
                     include=["distances", "metadatas"],
                 )
                 logger.info(
@@ -101,19 +101,22 @@ if uploaded_file:
 
         if results["metadatas"] and results["metadatas"][0]:
             for i, metadata in enumerate(results["metadatas"][0]):
+                col1, col2 = st.columns([1, 3])
+
                 label = metadata.get("label", "Unknown")
                 caption = metadata.get("caption", "-")
                 path = metadata.get("path", "N/A")
                 distance = distances[i]
 
-                st.markdown(
-                    f"**Label:** {label} (🔢 Distance: `{distance:.3f}`)"
-                )
-                st.markdown(f"_Caption:_ {caption}")
-
                 try:
-                    st.image(path, use_container_width=True, width=300)
-                    logger.info(f"🖼️ Displayed image from: {path}")
+                    with col1:
+                        st.image(metadata["path"], width=175)
+                        logger.info(f"🖼️ Displayed image from: {path}")
+                    with col2:
+                        st.markdown(f"**Label:** {label}")
+                        st.markdown(f"**Caption:** {caption}")
+                        st.markdown(f"**Distance:** `{distance:.3f}`")
+
                 except Exception as img_err:
                     st.warning(f"⚠️ Unable to display image: {path}")
                     st.text(f"Image path: {path}")
