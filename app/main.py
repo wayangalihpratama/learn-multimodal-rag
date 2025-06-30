@@ -1,5 +1,4 @@
 import streamlit as st
-
 from utils import get_image_embedding
 import chromadb
 from chromadb.config import Settings
@@ -30,8 +29,22 @@ try:
     )
     collection = chroma_client.get_or_create_collection(name="pest_disease")
     logger.info("✅ ChromaDB initialized.")
+
+    # Check if collection has data
+    test_result = collection.peek()
+    if not test_result["ids"]:
+        logger.warning("⚠️ No data found in ChromaDB collection.")
+        st.warning(
+            "⚠️ No image data indexed yet. Please run the indexing script."
+        )
+        st.stop()
+    else:
+        logger.info(f"📦 ChromaDB contains {len(test_result['ids'])} items.")
+
 except Exception as e:
     logger.exception(f"❌ Failed to initialize ChromaDB: {e}")
+    st.error("❌ Failed to initialize ChromaDB.")
+    st.stop()
 
 # --- Streamlit UI ---
 st.title("🌿 Multimodal RAG: Pest & Disease Image Search")
@@ -44,35 +57,52 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file:
-    st.image(uploaded_file, caption="Uploaded Image", use_column_width=True)
+    st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
     logger.info(f"📤 Image uploaded: {uploaded_file.name}")
 
     try:
         with st.spinner("🔍 Searching for similar images..."):
             query_embedding = get_image_embedding(uploaded_file)
             logger.info("✅ Image embedding generated.")
+            logger.info(f"🔢 Embedding length: {len(query_embedding)}")
 
-            results = collection.query(
-                query_embeddings=[query_embedding.tolist()], n_results=5
-            )
-            logger.info("✅ Query to ChromaDB completed.")
+            try:
+                results = collection.query(
+                    query_embeddings=[query_embedding.tolist()], n_results=5
+                )
+                logger.info(
+                    f"✅ Query returned {len(results['ids'][0])} results."
+                )
+                logger.debug(f"🔍 Raw results: {results}")
+
+            except Exception as e:
+                logger.exception(f"❌ Query to ChromaDB failed: {e}")
+                st.error(f"ChromaDB query failed: {e}")
+                st.stop()
 
         st.subheader("🔎 Top Similar Results")
-        for metadata in results["metadatas"][0]:
-            label = metadata.get("label", "Unknown")
-            caption = metadata.get("caption", "-")
-            path = metadata.get("path", "N/A")
+        st.json(results)  # show raw results
 
-            st.markdown(f"**Label:** {label}")
-            st.markdown(f"_Caption:_ {caption}")
-            try:
-                st.image(path, width=300)
-                logger.info(f"🖼️ Displayed image from: {path}")
-            except Exception as img_err:
-                st.warning(f"Unable to display image: {path}")
-                logger.warning(
-                    f"⚠️ Failed to display image at {path}: {img_err}"
-                )
+        if results["metadatas"] and results["metadatas"][0]:
+            for metadata in results["metadatas"][0]:
+                label = metadata.get("label", "Unknown")
+                caption = metadata.get("caption", "-")
+                path = metadata.get("path", "N/A")
+
+                st.markdown(f"**Label:** {label}")
+                st.markdown(f"_Caption:_ {caption}")
+                try:
+                    st.image(path, use_container_width=True)
+                    logger.info(f"🖼️ Displayed image from: {path}")
+                except Exception as img_err:
+                    st.warning(f"⚠️ Unable to display image: {path}")
+                    st.text(f"Image path: {path}")
+                    logger.warning(
+                        f"⚠️ Failed to display image at {path}: {img_err}"
+                    )
+        else:
+            st.warning("No similar results found.")
+            logger.info("🔍 No matching metadata found in results.")
 
     except Exception as err:
         st.error("Something went wrong during image search.")

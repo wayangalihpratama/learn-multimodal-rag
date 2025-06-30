@@ -8,6 +8,7 @@ services:
     volumes:
       - ./app:/app/app
       - ./data:/app/data
+      - ./chroma:/app/app/chroma
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped

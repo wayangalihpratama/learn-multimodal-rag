@@ -20,5 +20,8 @@ ENV PYTHONPATH=/app
 # Copy app code
 COPY app/ ./app
 
-# Default command: run Streamlit
-CMD ["streamlit", "run", "app/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# run entrypoint
+CMD ["/app/entrypoint.sh"]
