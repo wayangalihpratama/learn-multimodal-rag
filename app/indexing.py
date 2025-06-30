@@ -12,7 +12,10 @@ logger = logging.getLogger(__name__)
 
 # --- ChromaDB client ---
 chroma_client = HttpClient(host="chromadb", port=8000)
-collection = chroma_client.get_or_create_collection(name="pest_disease")
+collection = chroma_client.get_or_create_collection(
+    name="pest_disease",
+    metadata={"hnsw:space": "cosine"},  # 👈 ensures cosine distance
+)
 logger.info(f"✅ Chroma collection count: {collection.count()}")
 
 

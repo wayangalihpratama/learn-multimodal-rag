@@ -18,10 +18,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.info("🔧 Streamlit app started.")
 
+DISTANCE_THRESHOLD = 0.1  # adjust empirically
+
+
 # --- Initialize ChromaDB ---
 try:
     chroma_client = HttpClient(host="chromadb", port=8000)
-    collection = chroma_client.get_or_create_collection(name="pest_disease")
+    collection = chroma_client.get_or_create_collection(
+        name="pest_disease",
+        metadata={"hnsw:space": "cosine"},  # 👈 ensures cosine distance
+    )
     logger.info("✅ ChromaDB initialized.")
     logger.info(f"✅ Chroma collection count: {collection.count()}")
 
@@ -63,11 +69,26 @@ if uploaded_file:
 
             try:
                 results = collection.query(
-                    query_embeddings=[query_embedding.tolist()], n_results=5
+                    query_embeddings=[query_embedding.tolist()],
+                    n_results=3,
+                    include=["distances", "metadatas"],
                 )
                 logger.info(
                     f"✅ Query returned {len(results['ids'][0])} results."
                 )
+
+                # Get distances for similarity score
+                distances = results["distances"][0]
+                logger.info(f"All distances: {distances}")
+                if all(d > DISTANCE_THRESHOLD for d in distances):
+                    st.warning(
+                        "⚠️ No close matches found. This image may not belong to any known category."
+                    )
+                    logger.info(
+                        f"❌ All distances above threshold: {distances}"
+                    )
+                    st.stop()
+
                 logger.debug(f"🔍 Raw results: {results}")
 
             except Exception as e:
@@ -76,18 +97,22 @@ if uploaded_file:
                 st.stop()
 
         st.subheader("🔎 Top Similar Results")
-        st.json(results)  # show raw results
+        # st.json(results)  # show raw results
 
         if results["metadatas"] and results["metadatas"][0]:
-            for metadata in results["metadatas"][0]:
+            for i, metadata in enumerate(results["metadatas"][0]):
                 label = metadata.get("label", "Unknown")
                 caption = metadata.get("caption", "-")
                 path = metadata.get("path", "N/A")
+                distance = distances[i]
 
-                st.markdown(f"**Label:** {label}")
+                st.markdown(
+                    f"**Label:** {label} (🔢 Distance: `{distance:.3f}`)"
+                )
                 st.markdown(f"_Caption:_ {caption}")
+
                 try:
-                    st.image(path, use_container_width=True)
+                    st.image(path, use_container_width=True, width=300)
                     logger.info(f"🖼️ Displayed image from: {path}")
                 except Exception as img_err:
                     st.warning(f"⚠️ Unable to display image: {path}")
