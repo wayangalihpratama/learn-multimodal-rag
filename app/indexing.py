@@ -1,12 +1,11 @@
 import os
 from tqdm import tqdm
 import chromadb
-from chromadb.config import Settings
-from utils import get_image_embedding
-
-# from PIL import Image
-import uuid
 import logging
+import hashlib
+
+from chromadb.config import Settings
+from utils import get_image_embedding, generate_caption
 
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO)
@@ -23,40 +22,56 @@ DATA_DIR = "data/pest_disease"
 
 
 # --- Indexing ---
+def generate_image_id(file_path: str) -> str:
+    return hashlib.md5(file_path.encode()).hexdigest()
+
+
+def normalize_label(path: str) -> str:
+    # Convert path like "Tomato_Blight-Leaf" -> "tomato blight leaf"
+    return path.replace("_", " ").replace("-", " ").lower()
+
+
 def index_images():
     logger.info(f"📂 Indexing images from: {DATA_DIR}")
-    # indexing.py (partial, inside loop)
 
+    for root, _, files in os.walk(DATA_DIR):
+        for file in tqdm(files, desc="Indexing images"):
+            if not file.lower().endswith((".jpg", ".jpeg", ".png")):
+                continue
 
-for root, _, files in os.walk(DATA_DIR):
-    for file in tqdm(files, desc="Indexing images"):
-        if not file.lower().endswith((".jpg", ".jpeg", ".png")):
-            continue
+            file_path = os.path.join(root, file)
+            try:
+                label = normalize_label(os.path.relpath(root, DATA_DIR))
+                uid = generate_image_id(file_path=file_path)
 
-        file_path = os.path.join(root, file)
-        try:
-            # Get label from subfolder name
-            label = os.path.relpath(root, DATA_DIR)
+                # Check if this image has already been indexed
+                existing = collection.get(ids=[uid])
+                if existing["ids"]:
+                    logger.info(f"🔄 Updating existing entry for: {file_path}")
+                    collection.delete(ids=[uid])
 
-            uid = str(uuid.uuid4())
+                with open(file_path, "rb") as img_file:
+                    embedding = get_image_embedding(img_file)
+                    img_file.seek(0)  # rewind file before reusing
+                    blip_caption = generate_caption(img_file)
 
-            with open(file_path, "rb") as img_file:
-                embedding = get_image_embedding(img_file)
+                # Combine BLIP + label into a better caption
+                caption = (
+                    f"{blip_caption}. This image shows symptoms of {label}."
+                )
 
-            caption = "No caption yet"
+                collection.add(
+                    ids=[uid],
+                    embeddings=[embedding.tolist()],
+                    metadatas=[
+                        {"label": label, "path": file_path, "caption": caption}
+                    ],
+                )
 
-            collection.add(
-                ids=[uid],
-                embeddings=[embedding.tolist()],
-                metadatas=[
-                    {"label": label, "path": file_path, "caption": caption}
-                ],
-            )
+                logger.info(f"✅ Indexed: {file_path} [label: {label}]")
 
-            logger.info(f"✅ Indexed: {file_path} [label: {label}]")
-
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to process {file_path}: {e}")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to process {file_path}: {e}")
 
 
 if __name__ == "__main__":

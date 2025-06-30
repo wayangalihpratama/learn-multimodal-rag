@@ -3,6 +3,8 @@ import torch
 from PIL import Image
 import logging
 
+from transformers import BlipProcessor, BlipForConditionalGeneration
+
 # --- Setup Logging ---
 logger = logging.getLogger(__name__)
 
@@ -14,6 +16,20 @@ try:
     logger.info(f"CLIP model loaded on device: {device}")
 except Exception as e:
     logger.exception(f"Failed to load CLIP model: {e}")
+
+
+# --- BLIP Setup (runs once) ---
+try:
+    blip_processor = BlipProcessor.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    )
+    blip_model = BlipForConditionalGeneration.from_pretrained(
+        "Salesforce/blip-image-captioning-base"
+    ).to(device)
+    logger.info("BLIP model loaded successfully.")
+except Exception as e:
+    logger.exception("Failed to load BLIP model.")
+    raise e
 
 
 def get_image_embedding(image_file):
@@ -40,3 +56,27 @@ def get_image_embedding(image_file):
     except Exception as e:
         logger.exception("Failed to generate image embedding.")
         raise e
+
+
+def generate_caption(image_file):
+    """
+    Generate a natural language caption for the image using BLIP.
+    Args:
+        image_file: File-like object or PIL Image
+    Returns:
+        String caption
+    """
+    try:
+        image = Image.open(image_file).convert("RGB")
+        inputs = blip_processor(image, return_tensors="pt").to(device)
+
+        with torch.no_grad():
+            out = blip_model.generate(**inputs, max_new_tokens=50)
+
+        caption = blip_processor.decode(out[0], skip_special_tokens=True)
+        logger.info(f"BLIP caption generated: {caption}")
+        return caption
+
+    except Exception as e:
+        logger.exception(f"Failed to generate caption: {e}")
+        return "No caption"
