@@ -8,7 +8,7 @@ services:
     volumes:
       - ./app:/app/app
       - ./data:/app/data
-      - ./chroma:/app/app/chroma
+      - ./chroma:/app/app/chroma  # Make sure chroma persistence is mounted
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped

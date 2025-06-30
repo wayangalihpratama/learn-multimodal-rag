@@ -29,6 +29,7 @@ try:
     )
     collection = chroma_client.get_or_create_collection(name="pest_disease")
     logger.info("✅ ChromaDB initialized.")
+    logger.info(f"✅ Chroma collection count: {collection.count()}")
 
     # Check if collection has data
     test_result = collection.peek()
@@ -77,7 +78,7 @@ if uploaded_file:
 
             except Exception as e:
                 logger.exception(f"❌ Query to ChromaDB failed: {e}")
-                st.error(f"ChromaDB query failed: {e}")
+                st.error("ChromaDB query failed")
                 st.stop()
 
         st.subheader("🔎 Top Similar Results")

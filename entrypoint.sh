@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e  # Exit on any error
+
 echo "🛠️  Running indexing..."
 python app/indexing.py
 

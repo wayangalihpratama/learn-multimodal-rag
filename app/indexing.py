@@ -16,6 +16,8 @@ chroma_client = chromadb.Client(
     Settings(persist_directory="app/chroma", anonymized_telemetry=False)
 )
 collection = chroma_client.get_or_create_collection(name="pest_disease")
+logger.info(f"✅ Chroma collection count: {collection.count()}")
+
 
 # --- Dataset path ---
 DATA_DIR = "data/pest_disease"
@@ -69,6 +71,9 @@ def index_images():
                 )
 
                 logger.info(f"✅ Indexed: {file_path} [label: {label}]")
+                logger.info(
+                    f"📦 Final collection size: {collection.count()} items."
+                )
 
             except Exception as e:
                 logger.warning(f"⚠️ Failed to process {file_path}: {e}")
