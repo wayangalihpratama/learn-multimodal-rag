@@ -4,7 +4,7 @@ import logging
 import hashlib
 
 from chromadb import HttpClient
-from utils import get_image_embedding, generate_caption
+from utils import get_image_embedding, generate_caption, get_text_embedding
 
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO)
@@ -44,16 +44,22 @@ def index_images():
             file_path = os.path.join(root, file)
             try:
                 label = normalize_label(os.path.relpath(root, DATA_DIR))
-                uid = generate_image_id(file_path=file_path)
+                shared_id = generate_image_id(file_path=file_path)
 
                 # Check if this image has already been indexed
-                existing = collection.get(ids=[uid])
-                if existing["ids"]:
+                existing_imgs = collection.get(ids=[f"{shared_id}_img"])
+                if existing_imgs["ids"]:
                     logger.info(f"🔄 Updating existing entry for: {file_path}")
-                    collection.delete(ids=[uid])
+                    collection.delete(ids=[f"{shared_id}_img"])
+
+                # Check if this text has already been indexed
+                existing_txts = collection.get(ids=[f"{shared_id}_txt"])
+                if existing_txts["ids"]:
+                    logger.info(f"🔄 Updating existing entry for: {file_path}")
+                    collection.delete(ids=[f"{shared_id}_txt"])
 
                 with open(file_path, "rb") as img_file:
-                    embedding = get_image_embedding(img_file)
+                    embedding_img = get_image_embedding(img_file)
                     img_file.seek(0)  # rewind file before reusing
                     blip_caption = generate_caption(img_file)
 
@@ -61,12 +67,35 @@ def index_images():
                 caption = (
                     f"{blip_caption}. This image shows symptoms of {label}."
                 )
+                embedding_text = get_text_embedding(caption)
 
+                # Add image embedding
                 collection.add(
-                    ids=[uid],
-                    embeddings=[embedding.tolist()],
+                    ids=[f"{shared_id}_img"],
+                    embeddings=[embedding_img.tolist()],
                     metadatas=[
-                        {"label": label, "path": file_path, "caption": caption}
+                        {
+                            "group_id": shared_id,
+                            "type": "image",
+                            "label": label,
+                            "path": file_path,
+                            "caption": caption,
+                        }
+                    ],
+                )
+
+                # Add text embedding
+                collection.add(
+                    ids=[f"{shared_id}_txt"],
+                    embeddings=[embedding_text.tolist()],
+                    metadatas=[
+                        {
+                            "group_id": shared_id,
+                            "type": "caption",
+                            "label": label,
+                            "path": file_path,
+                            "caption": caption,
+                        }
                     ],
                 )
 

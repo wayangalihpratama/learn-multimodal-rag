@@ -3,7 +3,12 @@ import torch
 from PIL import Image
 import logging
 
-from transformers import BlipProcessor, BlipForConditionalGeneration
+from transformers import (
+    BlipProcessor,
+    BlipForConditionalGeneration,
+    CLIPTokenizer,
+    CLIPModel,
+)
 
 # --- Setup Logging ---
 logger = logging.getLogger(__name__)
@@ -16,6 +21,12 @@ try:
     logger.info(f"CLIP model loaded on device: {device}")
 except Exception as e:
     logger.exception(f"Failed to load CLIP model: {e}")
+
+# --- Load CLIP model for text ---
+text_clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+text_clip_tokenizer = CLIPTokenizer.from_pretrained(
+    "openai/clip-vit-base-patch32"
+)
 
 
 # --- BLIP Setup (runs once) ---
@@ -80,3 +91,19 @@ def generate_caption(image_file):
     except Exception as e:
         logger.exception(f"Failed to generate caption: {e}")
         return "No caption"
+
+
+def get_text_embedding(text: str):
+    """
+    Generate CLIP text embedding from an image caption.
+
+    Args:
+        text: string
+
+    Returns:
+        Numpy array of text embedding
+    """
+    inputs = text_clip_tokenizer(text, return_tensors="pt", truncation=True)
+    with torch.no_grad():
+        outputs = text_clip_model.get_text_features(**inputs)
+    return outputs[0].cpu().numpy()
