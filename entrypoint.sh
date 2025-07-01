@@ -7,7 +7,7 @@ until curl -s http://chromadb:8000/ > /dev/null; do
 done
 
 echo "🛠️  Running indexing..."
-python app/indexing.py
+python app/indexing_check.py
 
 echo "🚀 Starting Streamlit..."
 streamlit run app/main.py --server.port=8501

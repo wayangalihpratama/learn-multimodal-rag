@@ -62,7 +62,7 @@ if uploaded_file:
     logger.info(f"📤 Image uploaded: {uploaded_file.name}")
 
     try:
-        with st.spinner("🔍 Searching for similar images..."):
+        with st.spinner("🔍 Generating embedding and querying ChromaDB..."):
             query_embedding = get_image_embedding(uploaded_file)
             logger.info("✅ Image embedding generated.")
             logger.info(f"🔢 Embedding length: {len(query_embedding)}")
@@ -77,24 +77,21 @@ if uploaded_file:
                     f"✅ Query returned {len(results['ids'][0])} results."
                 )
 
-                # Get distances for similarity score
                 distances = results["distances"][0]
                 logger.info(f"All distances: {distances}")
-                if all(d > DISTANCE_THRESHOLD for d in distances):
-                    st.warning(
-                        "⚠️ No close matches found. This image may not belong to any known category."
-                    )
-                    logger.info(
-                        f"❌ All distances above threshold: {distances}"
-                    )
-                    st.stop()
-
-                logger.debug(f"🔍 Raw results: {results}")
 
             except Exception as e:
                 logger.exception(f"❌ Query to ChromaDB failed: {e}")
-                st.error("ChromaDB query failed")
+                st.error("❌ ChromaDB query failed.")
                 st.stop()
+
+        # ✅ Spinner ends here — now display results or warning
+        if all(d > DISTANCE_THRESHOLD for d in distances):
+            st.warning(
+                "⚠️ No close matches found. This image may not belong to any known category."
+            )
+            logger.info(f"❌ All distances above threshold: {distances}")
+            st.stop()
 
         st.subheader("🔎 Top Similar Results")
         # st.json(results)  # show raw results
