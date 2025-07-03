@@ -68,6 +68,11 @@ def index_images():
                     f"{blip_caption}. This image shows symptoms of {label}."
                 )
                 embedding_text = get_text_embedding(caption)
+                # Embedding just the label
+                embedding_label = get_text_embedding(label)
+                # Embedding a natural query-style sentence
+                augmented_caption = f"Show me an example of {label} disease"
+                embedding_augmented = get_text_embedding(augmented_caption)
 
                 # Add image embedding
                 collection.add(
@@ -84,14 +89,44 @@ def index_images():
                     ],
                 )
 
-                # Add text embedding
+                # Add original caption
                 collection.add(
-                    ids=[f"{shared_id}_txt"],
+                    ids=[f"{shared_id}_caption"],
                     embeddings=[embedding_text.tolist()],
                     metadatas=[
                         {
                             "group_id": shared_id,
                             "type": "caption",
+                            "label": label,
+                            "path": file_path,
+                            "caption": caption,
+                        }
+                    ],
+                )
+
+                # Add label
+                collection.add(
+                    ids=[f"{shared_id}_label"],
+                    embeddings=[embedding_label.tolist()],
+                    metadatas=[
+                        {
+                            "group_id": shared_id,
+                            "type": "label",
+                            "label": label,
+                            "path": file_path,
+                            "caption": caption,
+                        }
+                    ],
+                )
+
+                # Add augmented natural sentence
+                collection.add(
+                    ids=[f"{shared_id}_aug"],
+                    embeddings=[embedding_augmented.tolist()],
+                    metadatas=[
+                        {
+                            "group_id": shared_id,
+                            "type": "sentence",
                             "label": label,
                             "path": file_path,
                             "caption": caption,
