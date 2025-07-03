@@ -2,6 +2,7 @@ import clip
 import torch
 from PIL import Image
 import logging
+import numpy as np
 
 from transformers import (
     BlipProcessor,
@@ -107,3 +108,74 @@ def get_text_embedding(text: str):
     with torch.no_grad():
         outputs = text_clip_model.get_text_features(**inputs)
     return outputs[0].cpu().numpy()
+
+
+def normalize(vec):
+    """
+    Normalize a vector to unit length (L2 norm = 1).
+
+    This ensures that the vector has a consistent magnitude,
+    which is important for similarity comparisons using cosine distance.
+
+    Args:
+        vec (np.ndarray): Input vector.
+
+    Returns:
+        np.ndarray: Normalized vector.
+    """
+    return vec / np.linalg.norm(vec)
+
+
+def get_fused_embedding(
+    image_file=None, text=None, image_weight=0.5, text_weight=0.5
+):
+    """
+    Generate a fused embedding from an image and/or text query.
+
+    This function allows you to:
+    - Use only an image,
+    - Use only a text query,
+    - Or combine both (multimodal query).
+
+    When both are provided, it computes a weighted average of the image
+    and text embeddings, then normalizes the fused result to unit length
+    for stable similarity comparison.
+
+    Args:
+        image_file (file-like or None): Uploaded image file.
+        text (str or None): Optional text input from user.
+        image_weight (float): Weight for image embedding in fusion
+        (default 0.5).
+        text_weight (float): Weight for text embedding in fusion
+        (default 0.5).
+
+    Returns:
+        list: Fused (or individual) embedding as a list of floats.
+
+    Raises:
+        ValueError: If neither image nor text is provided.
+    """
+    # Get normalized image embedding if image is provided
+    image_emb = (
+        normalize(get_image_embedding(image_file)) if image_file else None
+    )
+
+    # Get normalized text embedding if text is provided
+    text_emb = normalize(get_text_embedding(text)) if text else None
+
+    # If both image and text are provided, compute weighted fusion
+    if image_emb is not None and text_emb is not None:
+        fused = normalize(image_weight * image_emb + text_weight * text_emb)
+        return fused.tolist()
+
+    # If only image is provided
+    elif image_emb is not None:
+        return image_emb.tolist()
+
+    # If only text is provided
+    elif text_emb is not None:
+        return text_emb.tolist()
+
+    # If neither image nor text is provided, raise error
+    else:
+        raise ValueError("At least one of image or text must be provided.")

@@ -1,8 +1,5 @@
 import streamlit as st
-from utils import (
-    get_image_embedding,
-    get_text_embedding,
-)  # make sure you implement get_text_embedding
+from utils import get_fused_embedding
 from chromadb import HttpClient
 import logging
 import os
@@ -48,8 +45,9 @@ except Exception as e:
     st.error("❌ Failed to initialize ChromaDB.")
     st.stop()
 
+
 # --- Streamlit UI ---
-st.title("🌿 Multimodal RAG: Pest & Disease Image Search")
+st.title("🌿 Multimodal RAG: Image + Text Pest & Disease Search")
 st.write(
     "Upload a plant or leaf image or enter a text description to find similar disease cases."
 )
@@ -58,30 +56,42 @@ uploaded_file = st.file_uploader(
     "📤 Upload an image", type=["jpg", "jpeg", "png"]
 )
 text_query = st.text_input("💬 Or search by text:")
-logger.info(f"Text query: {text_query}")
+search_button = st.button(
+    "🔍 Search", disabled=not (uploaded_file or text_query)
+)
 
 query_embedding = None
 query_type = None
 
-if uploaded_file:
-    st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
-    logger.info(f"📤 Image uploaded: {uploaded_file.name}")
-    query_embedding = get_image_embedding(uploaded_file)
-    query_type = "image"
-    DISTANCE_THRESHOLD = 0.1
+if search_button and (uploaded_file or text_query):
+    try:
+        query_embedding = get_fused_embedding(
+            image_file=uploaded_file,
+            text=text_query,
+            image_weight=0.6,  # You can tweak these weights
+            text_weight=0.4,
+        )
+        query_type = (
+            "fused"
+            if uploaded_file and text_query
+            else "image" if uploaded_file else "text"
+        )
+        DISTANCE_THRESHOLD = 0.1 if uploaded_file else 0.2
+        logger.info(f"🧠 Running {query_type} query.")
+    except Exception as e:
+        logger.exception(f"❌ Failed to generate query embedding: {e}")
+        st.error("Failed to process query embedding.")
+        st.stop()
 
-elif text_query:
-    query_embedding = get_text_embedding(text_query)
-    query_type = "text"
-    DISTANCE_THRESHOLD = 0.2
 
 if query_embedding is not None:
     try:
-        results = collection.query(
-            query_embeddings=[query_embedding.tolist()],
-            n_results=10,
-            include=["distances", "metadatas"],
-        )
+        with st.spinner("🔍 Searching similar cases..."):
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=10,
+                include=["distances", "metadatas"],
+            )
         logger.info(f"✅ Query returned {len(results['ids'][0])} results.")
         distances = results["distances"][0]
         logger.info(f"All distances: {distances}")
