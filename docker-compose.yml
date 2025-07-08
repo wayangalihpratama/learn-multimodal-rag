@@ -4,7 +4,7 @@ services:
     ports:
       - "8001:8000"
     volumes:
-      - ./chroma-data:/chroma  # optional, for persistence
+      - chroma_data:/chroma  # ✅ use named volume here
     restart: unless-stopped
 
   multimodal-rag:
@@ -19,3 +19,7 @@ services:
     depends_on:
       - chromadb
     restart: unless-stopped
+
+# ✅ Declare the volume at the bottom
+volumes:
+  chroma_data:
