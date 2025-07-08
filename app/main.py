@@ -2,9 +2,10 @@ import os
 import logging
 import streamlit as st
 
-from utils import get_fused_embedding
+from utils import get_fused_embedding, generate_caption
 from chromadb import HttpClient
 from query_rephraser import QueryRephraser
+from caption_enhancer import CaptionEnhancer
 
 # --- Setup Logging ---
 LOG_DIR = "app/logs"
@@ -24,6 +25,9 @@ DISTANCE_THRESHOLD = 0.1  # adjust empirically
 
 # --- Initialize Rephraser ---
 rephraser = QueryRephraser()
+
+# --- Initialize Caption Enchancer ---
+caption_enhancer = CaptionEnhancer()
 
 # --- Initialize ChromaDB ---
 try:
@@ -70,17 +74,25 @@ query_type = None
 
 if search_button and (uploaded_file or text_query):
     try:
+        image_caption = None
+        if uploaded_file:
+            blip_image_caption = generate_caption(image_file=uploaded_file)
+            image_caption = caption_enhancer.enhance(blip_image_caption)
+            logger.info(f"🔄 Image caption: '{image_caption}'")
+
         # 👇 Rephrase the text query using the LLM
         if text_query:
             original = text_query
-            text_query = rephraser.rephrase(text_query)
+            text_query = rephraser.rephrase(
+                user_input=text_query, image_caption=image_caption
+            )
             logger.info(f"🔄 Rephrased: '{original}' → '{text_query}'")
 
         query_embedding = get_fused_embedding(
             image_file=uploaded_file,
             text=text_query,
-            image_weight=0.6,  # You can tweak these weights
-            text_weight=0.4,
+            image_weight=0.9 if uploaded_file else 0.3,
+            text_weight=0.1 if uploaded_file else 0.7,
         )
         query_type = (
             "fused"
