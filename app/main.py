@@ -99,9 +99,17 @@ st.write(
     "Upload a plant or leaf image or enter a text description to find similar disease cases."
 )
 
-uploaded_file = st.file_uploader(
-    "📤 Upload an image", type=["jpg", "jpeg", "png"]
-)
+col1, col2 = st.columns([2, 1])  # Adjust width ratio as needed
+
+with col1:
+    uploaded_file = st.file_uploader(
+        "📤 Upload an image", type=["jpg", "jpeg", "png"]
+    )
+
+with col2:
+    if uploaded_file:
+        st.image(uploaded_file, caption="🖼️ Uploaded Image", width=175)
+
 text_query = st.text_input("💬 Or search by text:")
 search_button = st.button(
     "🔍 Search", disabled=not (uploaded_file or text_query)
