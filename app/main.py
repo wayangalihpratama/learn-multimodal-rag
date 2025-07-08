@@ -1,8 +1,10 @@
+import os
+import logging
 import streamlit as st
+
 from utils import get_fused_embedding
 from chromadb import HttpClient
-import logging
-import os
+from query_rephraser import QueryRephraser
 
 # --- Setup Logging ---
 LOG_DIR = "app/logs"
@@ -19,6 +21,9 @@ logger = logging.getLogger(__name__)
 logger.info("🔧 Streamlit app started.")
 
 DISTANCE_THRESHOLD = 0.1  # adjust empirically
+
+# --- Initialize Rephraser ---
+rephraser = QueryRephraser()
 
 # --- Initialize ChromaDB ---
 try:
@@ -65,6 +70,12 @@ query_type = None
 
 if search_button and (uploaded_file or text_query):
     try:
+        # 👇 Rephrase the text query using the LLM
+        if text_query:
+            original = text_query
+            text_query = rephraser.rephrase(text_query)
+            logger.info(f"🔄 Rephrased: '{original}' → '{text_query}'")
+
         query_embedding = get_fused_embedding(
             image_file=uploaded_file,
             text=text_query,

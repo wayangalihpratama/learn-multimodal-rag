@@ -4,4 +4,11 @@ transformers
 Pillow
 chromadb
 faiss-cpu
-git+https://github.com/openai/CLIP.git # openAI CLIP wrapper
+
+# LangChain core + Ollama support
+langchain
+langchain-community
+langchain-ollama
+ollama
+
+git+https://github.com/openai/CLIP.git
