@@ -5,6 +5,7 @@ import hashlib
 
 from chromadb import HttpClient
 from utils import get_image_embedding, generate_caption, get_text_embedding
+from caption_enhancer import CaptionEnhancer
 
 # --- Setup Logging ---
 logging.basicConfig(level=logging.INFO)
@@ -17,6 +18,9 @@ collection = chroma_client.get_or_create_collection(
     metadata={"hnsw:space": "cosine"},  # 👈 ensures cosine distance
 )
 logger.info(f"✅ Chroma collection count: {collection.count()}")
+
+# --- Caption enhancer ---
+caption_enhancer = CaptionEnhancer()
 
 
 # --- Dataset path ---
@@ -64,9 +68,15 @@ def index_images():
                     blip_caption = generate_caption(img_file)
 
                 # Combine BLIP + label into a better caption
-                caption = (
+                combined_caption = (
                     f"{blip_caption}. This image shows symptoms of {label}."
                 )
+                logger.info(f"📝 Combined caption: {combined_caption}")
+
+                # enhance combined caption
+                caption = caption_enhancer.enhance(combined_caption)
+                logger.info(f"📝 Enhanced caption: {caption}")
+
                 embedding_text = get_text_embedding(caption)
                 # Embedding just the label
                 embedding_label = get_text_embedding(label)
